@@ -4,7 +4,7 @@ using ClinicService.Protos;
 using Grpc.Core;
 using static ClinicService.Protos.ClientService;
 
-namespace ClinicService.Services;
+namespace ClinicService.Services.Impl;
 
 public class ClientService : ClientServiceBase
 {
@@ -18,7 +18,7 @@ public class ClientService : ClientServiceBase
         _dbContext = dbContext;
     }
 
-    public override Task<Protos.CreateClientResponse> CreateClient(Protos.CreateClientRequest request, ServerCallContext context)
+    public override Task<CreateClientResponse> CreateClient(CreateClientRequest request, ServerCallContext context)
     {
         var client = new Client
         {

@@ -44,3 +44,6 @@ ASP.Net Core EF
 Google.Protobuf
 Grpc.Net.Clinet
 Grpc.Tools
+
+
+для работы JWT-токенами используется библиотека Microsoft.AspNetCore.Authentication.JwtBearer

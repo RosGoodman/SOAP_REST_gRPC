@@ -12,10 +12,10 @@ namespace ClinicClient
         static void Main(string[] args)
         {
             //рекомендуется использовать для работы по незащищенному соединению
-            AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
+            //AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
             //канал с указанием порта, который установили на сервере (Program ConfigureCestrel)
-            using var channel = GrpcChannel.ForAddress("http://localhost:5001");
+            using var channel = GrpcChannel.ForAddress("https://localhost:5001");
 
             AddClients(channel);
             Console.WriteLine("========\n=======");

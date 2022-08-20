@@ -3,9 +3,12 @@ using ClinicService.Repositoryes.Impl;
 using ClinicService.Repositoryes;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.HttpLogging;
-using ClinicService.Services;
 using System.Net;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using ClinicService.Services.Impl;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 namespace ClinicService
 {
@@ -25,6 +28,8 @@ namespace ClinicService
                 options.Listen(IPAddress.Any, 5001, listenOptions =>
                 {
                     listenOptions.Protocols = HttpProtocols.Http2;
+                    //сертификат создается при помощи утилиты "диспетчер служб iis".
+                    listenOptions.UseHttps(@"D:\CSharp\testCertificate.pfx", "12345");
                 });
             });
 
@@ -57,6 +62,27 @@ namespace ClinicService
             #endregion
 
             builder.Services.AddControllers();
+
+            //конфигурация аутентификации
+            builder.Services.AddAuthentication(x =>
+            {
+                x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+                .AddJwtBearer(x =>
+                {
+                    x.RequireHttpsMetadata = false;
+                    x.SaveToken = true;
+                    x.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateIssuerSigningKey = true,
+                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(AuthenticateService.SecretKey)),
+                        ValidateIssuer = false,
+                        ValidateAudience = false,
+                        ClockSkew = TimeSpan.Zero
+                    };
+                });
+
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
@@ -82,12 +108,11 @@ namespace ClinicService
                     builder.UseHttpLogging();
                 });
 
-            
-
 
             app.MapControllers();
             app.UseRouting();
 
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>   // 2.grpc

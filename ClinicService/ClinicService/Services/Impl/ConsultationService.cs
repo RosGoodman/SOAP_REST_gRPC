@@ -5,7 +5,7 @@ using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using static ClinicService.Protos.ConsultationService;
 
-namespace ClinicService.Services;
+namespace ClinicService.Services.Impl;
 
 public class ConsultationService : ConsultationServiceBase
 {
