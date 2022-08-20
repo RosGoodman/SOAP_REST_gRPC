@@ -1,0 +1,142 @@
+using ClinicService.Data.Context;
+using ClinicService.Repositoryes.Impl;
+using ClinicService.Repositoryes;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.HttpLogging;
+using System.Net;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
+using ClinicService.Services.Impl;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using NLog.Web;
+using ClinicService.Services.Interfaces;
+
+namespace ClinicService
+{
+    public class Program
+    {
+        public static void Main(string[] args)
+        {
+            var builder = WebApplication.CreateBuilder(args);
+
+            // Add services to the container.
+
+            /*4. дл€ конфигурировани€ соответствующего веб-сервера, в рамках конфигурации этого сервера
+             * необходимо добавить настройки и порт, по которому будут передаватьс€ бинарные сооющени€
+             */
+            builder.WebHost.ConfigureKestrel(options =>
+            {
+                options.Listen(IPAddress.Any, 5001, listenOptions =>
+                {
+                    listenOptions.Protocols = HttpProtocols.Http2;
+                    //сертификат создаетс€ при помощи утилиты "диспетчер служб iis".
+                    listenOptions.UseHttps(@"D:\CSharp\testCertificate.pfx", "12345");
+                });
+            });
+
+
+            builder.Services.AddDbContext<ClinicServiceDbContext>(options =>
+            {
+                options.UseSqlServer(builder.Configuration["Settings:DatabaseOptions:ConnectionString"]);
+            });
+
+            //фреймворк grpc несовместим с системой логгировани€ запросов в контексте asp.net core
+            //по этой причине добавл€етс€ настройка 3.
+            builder.Services.AddGrpc(); // 1. инсталл€ци€ сервиса grpc
+
+            builder.Services.AddHttpLogging(logging =>
+            {
+                logging.LoggingFields = HttpLoggingFields.All | HttpLoggingFields.RequestQuery;
+                logging.RequestBodyLogLimit = 4096;
+                logging.ResponseBodyLogLimit = 4096;
+                logging.RequestHeaders.Add("Authorization");
+                logging.RequestHeaders.Add("X-Real-IP");
+                logging.RequestHeaders.Add("X-Forwarded-For");
+            });
+
+            builder.Host.ConfigureLogging(logging =>
+            {
+                logging.ClearProviders();
+                logging.AddConsole();
+
+            }).UseNLog(new NLogAspNetCoreOptions() { RemoveLoggerFactoryFilter = true });
+
+            #region Configure Repository Services
+
+            builder.Services.AddScoped<IAuthenticateService, AuthenticateService>();
+            builder.Services.AddScoped<IPetRepository, PetRepository>();
+            builder.Services.AddScoped<IConsultationRepository, ConsultationRepository>();
+            builder.Services.AddScoped<IClientRepository, ClientRepository>();
+
+            #endregion
+
+            builder.Services.AddControllers();
+
+            //конфигураци€ аутентификации
+            builder.Services.AddAuthentication(x =>
+            {
+                x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+                .AddJwtBearer(x =>
+                {
+                    x.RequireHttpsMetadata = false;
+                    x.SaveToken = true;
+                    x.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateIssuerSigningKey = true,
+                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(AuthenticateService.SecretKey)),
+                        ValidateIssuer = false,
+                        ValidateAudience = false,
+                        ClockSkew = TimeSpan.Zero
+                    };
+                });
+
+            // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+            builder.Services.AddEndpointsApiExplorer();
+            builder.Services.AddSwaggerGen();
+
+            var app = builder.Build();
+
+            // Configure the HTTP request pipeline.
+            if (app.Environment.IsDevelopment())
+            {
+                app.UseSwagger();
+                app.UseSwaggerUI();
+            }
+
+            //app.UseHttpLogging();
+            app.UseRouting();
+
+            // 3.когда будут приходить запросы в рамках grpc-фреймворка, то эти запросы не будут логгироватьс€
+            // стандартной системой логгировани€ asp.net core
+            // microsoft обещают исправить в 7-й версии .net 7
+            app.UseWhen(
+                ctx => ctx.Request.ContentType != "application/grpc",
+                builder =>
+                {
+                    builder.UseHttpLogging();
+                });
+
+
+            app.MapControllers();
+            
+
+            app.UseAuthentication();
+            app.UseAuthorization();
+
+            app.UseEndpoints(endpoints =>   // 2.grpc
+            {
+                // Communication with gRPC endpoints must be made through a gRPC client.
+                // To learn how to create a client, visit: https://go.microsoft.com/fwlink/?linkid=2086909
+                endpoints.MapGrpcService<ClientService>();
+                endpoints.MapGrpcService<PetService>();
+                endpoints.MapGrpcService<ConsultationService>();
+                endpoints.MapGrpcService<AuthService>();
+            });
+
+            app.Run();
+        }
+    }
+}
