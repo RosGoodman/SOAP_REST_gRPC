@@ -1,5 +1,6 @@
 ﻿using ClinicService.Protos;
 using Google.Protobuf.WellKnownTypes;
+using Grpc.Core;
 using Grpc.Net.Client;
 using static ClinicService.Protos.ClientService;
 using static ClinicService.Protos.ConsultationService;
@@ -17,11 +18,41 @@ namespace ClinicClient
             //канал с указанием порта, который установили на сервере (Program ConfigureCestrel)
             using var channel = GrpcChannel.ForAddress("https://localhost:5001");
 
-            AddClients(channel);
+            ClinicService.Protos.AuthenticateService.AuthenticateServiceClient authenticateServiceClient = new AuthenticateService.AuthenticateServiceClient(channel);
+
+            var authenticationResponse = authenticateServiceClient.Login(new ClinicService.Protos.AuthenticationRequest
+            {
+                UserName = "some.mail@gmail.com",
+                Password = "12345"
+            });
+
+            //проверка статуса аутентификации
+            if(authenticationResponse.Status != 0)
+            {
+                Console.WriteLine("Authentication error.");
+                Console.ReadKey();
+                return;
+            }
+
+            Console.WriteLine($"Session token: {authenticationResponse.SessionInfo.SessionToken}");
+
+            //перехватчик. В данном случае при каждом запросе на сервер в заголовок вставлялся сессионный токен
+            var credentials = CallCredentials.FromInterceptor((c, m) =>
+            {
+                m.Add("Authorization",
+                    $"Bearer {authenticationResponse.SessionInfo.SessionToken}");
+                return Task.CompletedTask;
+            });
+
+            //создание защищенного канала
+            var protectedChannel = GrpcChannel.ForAddress("https://localhost:5001",
+                new GrpcChannelOptions { Credentials = ChannelCredentials.Create(new SslCredentials(), credentials) });
+
+            AddClients(protectedChannel);
             Console.WriteLine("========\n=======");
-            AddPets(channel);
+            AddPets(protectedChannel);
             Console.WriteLine("========\n=======");
-            AddConsultation(channel);
+            AddConsultation(protectedChannel);
 
             Console.ReadKey();
         }

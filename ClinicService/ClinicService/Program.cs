@@ -9,6 +9,8 @@ using ClinicService.Services.Impl;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using NLog.Web;
+using ClinicService.Services.Interfaces;
 
 namespace ClinicService
 {
@@ -53,8 +55,16 @@ namespace ClinicService
                 logging.RequestHeaders.Add("X-Forwarded-For");
             });
 
+            builder.Host.ConfigureLogging(logging =>
+            {
+                logging.ClearProviders();
+                logging.AddConsole();
+
+            }).UseNLog(new NLogAspNetCoreOptions() { RemoveLoggerFactoryFilter = true });
+
             #region Configure Repository Services
 
+            builder.Services.AddScoped<IAuthenticateService, AuthenticateService>();
             builder.Services.AddScoped<IPetRepository, PetRepository>();
             builder.Services.AddScoped<IConsultationRepository, ConsultationRepository>();
             builder.Services.AddScoped<IClientRepository, ClientRepository>();
@@ -97,6 +107,7 @@ namespace ClinicService
             }
 
             //app.UseHttpLogging();
+            app.UseRouting();
 
             // 3.когда будут приходить запросы в рамках grpc-фреймворка, то эти запросы не будут логгироваться
             // стандартной системой логгирования asp.net core
@@ -110,7 +121,7 @@ namespace ClinicService
 
 
             app.MapControllers();
-            app.UseRouting();
+            
 
             app.UseAuthentication();
             app.UseAuthorization();
@@ -122,6 +133,7 @@ namespace ClinicService
                 endpoints.MapGrpcService<ClientService>();
                 endpoints.MapGrpcService<PetService>();
                 endpoints.MapGrpcService<ConsultationService>();
+                endpoints.MapGrpcService<AuthService>();
             });
 
             app.Run();

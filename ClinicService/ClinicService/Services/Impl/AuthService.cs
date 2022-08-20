@@ -7,9 +7,11 @@ using ClinicService.Protos;
 using SessionInfo = ClinicService.Protos.SessionInfo;
 using AccountDto = ClinicService.Protos.AccountDto;
 using System.Net.Http.Headers;
+using Microsoft.AspNetCore.Authorization;
 
 namespace ClinicService.Services.Impl;
 
+[Authorize]
 public class AuthService : Proto.AuthenticateServiceBase
 {
     #region Services
@@ -27,6 +29,7 @@ public class AuthService : Proto.AuthenticateServiceBase
 
     #endregion
 
+    [AllowAnonymous]
     public override Task<Protos.AuthenticationResponse> Login(Protos.AuthenticationRequest request, ServerCallContext context)
     {
         Req.AuthenticationResponse authenticationResponse = _authenticateService.Login(new Req.AuthenticationRequest
