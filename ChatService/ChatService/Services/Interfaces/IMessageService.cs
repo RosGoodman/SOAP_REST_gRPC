@@ -2,4 +2,5 @@
 
 public interface IMessageService
 {
+    int AddClient(string name);
 }
