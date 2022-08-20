@@ -3,6 +3,9 @@ using ClinicService.Repositoryes.Impl;
 using ClinicService.Repositoryes;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.HttpLogging;
+using ClinicService.Services;
+using System.Net;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 
 namespace ClinicService
 {
@@ -14,10 +17,26 @@ namespace ClinicService
 
             // Add services to the container.
 
+            /*4. дл€ конфигурировани€ соответствующего веб-сервера, в рамках конфигурации этого сервера
+             * необходимо добавить настройки и порт, по которому будут передаватьс€ бинарные сооющени€
+             */
+            builder.WebHost.ConfigureKestrel(options =>
+            {
+                options.Listen(IPAddress.Any, 5001, listenOptions =>
+                {
+                    listenOptions.Protocols = HttpProtocols.Http2;
+                });
+            });
+
+
             builder.Services.AddDbContext<ClinicServiceDbContext>(options =>
             {
                 options.UseSqlServer(builder.Configuration["Settings:DatabaseOptions:ConnectionString"]);
             });
+
+            //фреймворк grpc несовместим с системой логгировани€ запросов в контексте asp.net core
+            //по этой причине добавл€етс€ настройка 3.
+            builder.Services.AddGrpc(); // 1. инсталл€ци€ сервиса grpc
 
             builder.Services.AddHttpLogging(logging =>
             {
@@ -51,11 +70,29 @@ namespace ClinicService
                 app.UseSwaggerUI();
             }
 
-            app.UseHttpLogging();
+            //app.UseHttpLogging();
+
+            // 3.когда будут приходить запросы в рамках grpc-фреймворка, то эти запросы не будут логгироватьс€
+            // стандартной системой логгировани€ asp.net core
+            // microsoft обещают исправить в 7-й версии .net 7
+            app.UseWhen(
+                ctx => ctx.Request.ContentType != "application/grpc",
+                builder =>
+                {
+                    builder.UseHttpLogging();
+                });
+
             app.UseAuthorization();
 
 
             app.MapControllers();
+            app.UseRouting();
+            app.UseEndpoints(endpoints =>   // 2.grpc
+            {
+                // Communication with gRPC endpoints must be made through a gRPC client.
+                // To learn how to create a client, visit: https://go.microsoft.com/fwlink/?linkid=2086909
+                endpoints.MapGrpcService<ClientService>();
+            });
 
             app.Run();
         }
