@@ -82,16 +82,21 @@ namespace ClinicService
                     builder.UseHttpLogging();
                 });
 
-            app.UseAuthorization();
+            
 
 
             app.MapControllers();
             app.UseRouting();
+
+            app.UseAuthorization();
+
             app.UseEndpoints(endpoints =>   // 2.grpc
             {
                 // Communication with gRPC endpoints must be made through a gRPC client.
                 // To learn how to create a client, visit: https://go.microsoft.com/fwlink/?linkid=2086909
                 endpoints.MapGrpcService<ClientService>();
+                endpoints.MapGrpcService<PetService>();
+                endpoints.MapGrpcService<ConsultationService>();
             });
 
             app.Run();

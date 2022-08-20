@@ -1,5 +1,5 @@
 ﻿using ClinicService.Data.Models;
-using ClinicService.Models.Requests;
+using ClinicService.Models.Requests.Client;
 using ClinicService.Repositoryes;
 using Microsoft.AspNetCore.Mvc;
 

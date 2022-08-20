@@ -18,13 +18,14 @@ public class ClientRepository : IClientRepository
     /// <inheritdoc/>
     public int Add(Client item)
     {
+        if (item is null) return -1;
         try
         {
             _dbContext.Clients.Add(item);
             _dbContext.SaveChanges();
             return item.ClientId;
         }
-        catch (Exception ex) { _logger.LogError($"Ошибка при попытке выполнить метод {nameof(Add)} в репозитории {nameof(ClientRepository)}"); }
+        catch (Exception ex) { _logger.LogError($"Ошибка при попытке выполнить метод {nameof(Add)} в репозитории {nameof(ClientRepository)}. {ex.Message}"); }
         return -1;
     }
 
@@ -33,11 +34,11 @@ public class ClientRepository : IClientRepository
     {
         try
         {
-            if (item == null)
+            if (item is null)
                 throw new NullReferenceException();
             Delete(item.ClientId);
         }
-        catch (Exception ex) { _logger.LogError($"Ошибка при попытке выполнить метод {nameof(Delete)} в репозитории {nameof(ClientRepository)}"); }
+        catch (Exception ex) { _logger.LogError($"Ошибка при попытке выполнить метод {nameof(Delete)} в репозитории {nameof(ClientRepository)}. {ex.Message}"); }
     }
 
     /// <inheritdoc/>
@@ -46,12 +47,12 @@ public class ClientRepository : IClientRepository
         try
         {
             var client = GetById(id);
-            if (client == null)
+            if (client is null)
                 throw new KeyNotFoundException();
             _dbContext.Remove(client);
             _dbContext.SaveChanges();
         }
-        catch (Exception ex) { _logger.LogError($"Ошибка при попытке выполнить метод {nameof(Delete)} в репозитории {nameof(ClientRepository)}"); }
+        catch (Exception ex) { _logger.LogError($"Ошибка при попытке выполнить метод {nameof(Delete)} в репозитории {nameof(ClientRepository)}. {ex.Message}"); }
     }
 
     /// <inheritdoc/>
@@ -61,7 +62,7 @@ public class ClientRepository : IClientRepository
         {
             return _dbContext.Clients.ToList();
         }
-        catch (Exception ex) { _logger.LogError($"Ошибка при попытке выполнить метод {nameof(GetAll)} в репозитории {nameof(ClientRepository)}"); }
+        catch (Exception ex) { _logger.LogError($"Ошибка при попытке выполнить метод {nameof(GetAll)} в репозитории {nameof(ClientRepository)}. {ex.Message}"); }
         return null!;
     }
 
@@ -72,7 +73,7 @@ public class ClientRepository : IClientRepository
         {
             return _dbContext.Clients.FirstOrDefault(client => client.ClientId == id);
         }
-        catch (Exception ex) { _logger.LogError($"Ошибка при попытке выполнить метод {nameof(GetById)} в репозитории {nameof(ClientRepository)}"); }
+        catch (Exception ex) { _logger.LogError($"Ошибка при попытке выполнить метод {nameof(GetById)} в репозитории {nameof(ClientRepository)}. {ex.Message}"); }
         return null!;
     }
 
@@ -81,11 +82,11 @@ public class ClientRepository : IClientRepository
     {
         try
         {
-            if (item == null)
+            if (item is null)
                 throw new NullReferenceException();
 
             var client = GetById(item.ClientId);
-            if (client == null)
+            if (client is null)
                 throw new KeyNotFoundException();
 
             client.Document = item.Document;
@@ -96,6 +97,6 @@ public class ClientRepository : IClientRepository
             _dbContext.Update(client);
             _dbContext.SaveChanges();
         }
-        catch (Exception ex) { _logger.LogError($"Ошибка при попытке выполнить метод {nameof(Update)} в репозитории {nameof(ClientRepository)}"); }
+        catch (Exception ex) { _logger.LogError($"Ошибка при попытке выполнить метод {nameof(Update)} в репозитории {nameof(ClientRepository)}. {ex.Message}"); }
     }
 }

@@ -1,4 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿#nullable disable
+
+using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 
 namespace ClinicService.Data.Models;

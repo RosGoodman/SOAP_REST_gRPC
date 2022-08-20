@@ -1,8 +1,8 @@
-﻿namespace ClinicService.Models.Requests;
+﻿namespace ClinicService.Models.Requests.Client;
 
 public class CreateClientRequest
 {
-    public string Document { get; set; }
+    public string? Document { get; set; }
 
     public string? Surname { get; set; }
 
